@@ -1,30 +1,38 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns   
+import seaborn as sns
 from ucimlrepo import fetch_ucirepo
 
+# Load dataset (includes both red and white)
 wine_quality = fetch_ucirepo(id=186)
 
-X = wine_quality.data.features
-y = wine_quality.data.targets
+# Use the full version that includes 'color'
+df_full = wine_quality.data.original
 
-df = X.copy()
-df["quality"] = y.squeeze()          
+# Filter for white or red wine
+df_white = df_full[df_full['color'] == 'red'].reset_index(drop=True)
+
+# Separate features and target
+X = df_white.drop(columns=['quality', 'color'])
+y = df_white['quality']
+
+# Create combined DataFrame for correlation analysis
+df_corr = X.copy()
+df_corr["quality"] = y
 
 # Feature vs target correlation
 target_corr = (
-    df.corr(numeric_only=True)["quality"]
+    df_corr.corr(numeric_only=True)["quality"]
       .drop("quality")
       .sort_values(ascending=False)
 )
-print("Feature vs quality (Pearson):\n", target_corr, "\n")
+print("[RED WINE] Feature vs quality (Pearson):\n", target_corr, "\n")
 
 # Feature vs feature correlation
-corr_matrix = df.corr(numeric_only=True).abs()
+corr_matrix = df_corr.corr(numeric_only=True).abs()
 upper = corr_matrix.where(np.triu(np.ones(corr_matrix.shape), k=1).astype(bool))
 
-# columns that have any correlation above the cutoff (say, 0.80)
 high_corr_cutoff = 0.80
 to_consider_dropping = [
     col for col in upper.columns if any(upper[col] > high_corr_cutoff)
@@ -38,5 +46,5 @@ sns.heatmap(corr_matrix,
             vmin=-1, vmax=1,
             cmap="coolwarm",
             linewidths=.5, square=True)
-plt.title("Wine‑quality correlation matrix (Pearson)")
+plt.title("White Wine Quality Correlation Matrix (Pearson)")
 plt.show()
