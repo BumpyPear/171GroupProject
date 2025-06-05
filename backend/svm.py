@@ -199,7 +199,6 @@ class WhiteWineSVM:
 def runWhiteWineSVM(tune_hyperparams=True):
     # Run a complete white wine SVM experiment
 
-    print(f"\nWHITE WINE QUALITY SVM :\n")
     print(f"Hyperparameter Tuning: {tune_hyperparams}")
     
     # Initialize and load data
@@ -224,14 +223,14 @@ def runWhiteWineSVM(tune_hyperparams=True):
     
     return wine_svm, results
 
-# Function to integrate with your Flask app
+# Function to integrate with Flask app
 def getWineAPI():
     # Train and return white wine SVM model for API integration and function can be called from your Flask app
     wine_svm = WhiteWineSVM()
     X, y = wine_svm.DataLoader()
     wine_svm.DataGrouping(X, y)
     
-    # Use parameters for high training performance (~95%) and good testing (~87%)
+    # Use parameters for high training performance
     wine_svm.SVMtraining(kernel='rbf', C=50, gamma='scale')
     
     return wine_svm
@@ -240,27 +239,3 @@ def getWineAPI():
 if __name__ == "__main__":
     # Run single experiment
     wine_svm, results = runWhiteWineSVM(tune_hyperparams=True)
-    
-    # Example prediction on new white wine data
-    print("\nEXAMPLE WHITE WINE PREDICTION : \n")
-    
-    # Create example white wine features (you can modify these values)
-    example_wine = pd.DataFrame({
-        'fixed_acidity': [7.4],
-        'volatile_acidity': [0.7],
-        'citric_acid': [0.0],
-        'residual_sugar': [1.9],
-        'chlorides': [0.076],
-        'free_sulfur_dioxide': [11.0],
-        'total_sulfur_dioxide': [34.0],
-        'density': [0.9978],
-        'pH': [3.51],
-        'sulphates': [0.56],
-        'alcohol': [9.4]
-    })
-    
-    # predictions and probabilities
-    predictions, probabilities = wine_svm.WineQualityPrediction(example_wine)
-    print(f"Predicted white wine quality: {predictions[0]}")
-    if probabilities is not None:
-        print(f"Prediction probabilities: {probabilities[0]}")
