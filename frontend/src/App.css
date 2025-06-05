@@ -40,3 +40,34 @@
 .read-the-docs {
   color: #888;
 }
+
+.dropdown {
+  padding: 0.5em;
+  border-radius: 6px;
+  margin: 0.5em;
+}
+
+.main-container {
+  display: flex;
+  flex-direction: column;
+  width: 15em;
+  justify-self: center;
+}
+
+.input-field {
+  margin-top: 1.5em;
+  display: flex;
+  flex-direction: row;
+  gap: 1em;
+  align-items: center;
+  justify-content: center;
+}
+.input {
+  padding: 0.5em;
+  border-radius: 6px;
+  font-size: 0.9em;
+  border-color: #a3a3a3aa;
+}
+.predict-button {
+  margin-top: 1.5em;
+}
