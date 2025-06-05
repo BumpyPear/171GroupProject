@@ -33,7 +33,6 @@ svm_features   = svm_bundle["feature_names"]
 # random forests pipeline
 rf_path = os.path.join(ARTIFACT_DIR, "wine_rf_pipeline.pkl")
 rf_bundle = joblib.load(rf_path)
-rf_scaler     = rf_bundle["scaler"]
 rf_model      = rf_bundle["model"]
 rf_features   = rf_bundle["feature_names"]
 

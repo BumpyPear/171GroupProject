@@ -37,7 +37,6 @@ def train_and_save_polyreg(degree=2, model_type="ridge", alpha=1.0, scaler_type=
 
     # Save it all into disk:
     models_dir = os.path.join(os.path.dirname(__file__), "models")
-    os.makedirs(models_dir, exist_ok=True)
     joblib.dump(bundle_poly, os.path.join(models_dir, "wine_poly_pipeline.pkl"))
     print("-- Saved wine_poly_pipeline.pkl --")
 
@@ -59,10 +58,14 @@ def train_and_save_svm():
     }
 
     # Save it to disk.
-    joblib.dump(bundle_svm, "backend/models/wine_svm_pipeline.pkl")
+    models_dir = os.path.join(os.path.dirname(__file__), "models")
+    joblib.dump(bundle_svm, os.path.join(models_dir, "wine_svm_pipeline.pkl"))
     print("-- Saved wine_svm_pipeline.pkl --")
 
 if __name__ == "__main__":
+    models_dir = os.path.join(os.path.dirname(__file__), "models")
+    os.makedirs(models_dir, exist_ok=True)
+
     train_and_save_polyreg(degree=2, model_type="ridge", alpha=1.0, scaler_type="standard")
     train_and_save_svm()
     train_and_save_rf(n_estimators=100)
