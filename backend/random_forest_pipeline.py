@@ -55,7 +55,7 @@ def train_and_save_rf(n_estimators=100, random_state=42):
     }
 
     # 7) Save to disk
-    ARTIFACT_DIR = os.path.join(os.path.dirname(__file__), "artifacts")
+    ARTIFACT_DIR = os.path.join(os.path.dirname(__file__), "models")
     os.makedirs(ARTIFACT_DIR, exist_ok=True)
     rf_path = os.path.join(ARTIFACT_DIR, "wine_rf_pipeline.pkl")
     joblib.dump(bundle, rf_path)

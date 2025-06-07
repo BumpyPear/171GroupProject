@@ -61,7 +61,7 @@ const models: { key: ModelKey; label: string }[] = [
             ? err.message
             : "unknown error while fetching features";
         setError(msg);
-      })
+      })  
   }, [selectedModel])
 
   const handleChange = (
@@ -108,6 +108,7 @@ const models: { key: ModelKey; label: string }[] = [
       <label>
         Choose Model:{" "}
         <select
+        className='dropdown'
           value={selectedModel}
           onChange={(e) => setSelectedModel(e.target.value as ModelKey)}
         >
@@ -138,6 +139,7 @@ const models: { key: ModelKey; label: string }[] = [
             >
               <label style={{ flex: "1 0 150px" }}>{feat}:</label>
               <input
+                className='input'
                 type="number"
                 step="any"
                 required
