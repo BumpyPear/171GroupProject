@@ -2,240 +2,167 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.svm import SVC
-from sklearn.model_selection import train_test_split, GridSearchCV, cross_val_score
-from sklearn.preprocessing import StandardScaler, LabelEncoder
-from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
-from sklearn.decomposition import PCA
+from sklearn.svm import SVR
+from sklearn.model_selection import train_test_split, learning_curve
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import r2_score, mean_squared_error
 from ucimlrepo import fetch_ucirepo
 import warnings
 warnings.filterwarnings('ignore')
 
-class WhiteWineSVM:
+class WineQualitySVR:
     def __init__(self):
-        # Initialize SVM for white wine quality prediction only
-
         self.scaler = StandardScaler()
-        self.svm_model = None
-        self.label_encoder = LabelEncoder()
-        self.X_train = None
-        self.X_test = None
+        self.svr_model = None
+        self.X_train_scaled = None
+        self.X_test_scaled = None
         self.y_train = None
         self.y_test = None
         self.feature_names = None
+
+    def Dataset_Loader(self):
+        print("Fetching wine quality dataset from UCI repository : ")
+
+        wine_quality_repo = fetch_ucirepo(id=186)
+        df_full = wine_quality_repo.data.original
+            
+        df_white = df_full[df_full['color'] == 'white'].drop(columns=['color']).reset_index(drop=True)
+
+        print(f"White wine dataset loaded : {df_white.shape}\n")
         
-    def DataLoader(self):
-        # Load white wine quality dataset and fetch dataset
-        wine_quality = fetch_ucirepo(id=186)
-        df_full = wine_quality.data.original
-        
-        # print dataset info
-        print(f"Total dataset : {df_full.shape}")
-        print(f"Wine types in dataset: {df_full['color'].value_counts()}")
-        
-        # Filter for WHITE wine only
-        df = df_full[df_full['color'] == 'white'].reset_index(drop=True)
-        
-        # Display a list of qualities
-        print(f"White wine dataset : {df.shape}")
-        print(f"Quality distribution:\n{df['quality'].value_counts().sort_index().to_string()}")
-        
-        # Separate features and target
-        X = df.drop(columns=['quality', 'color'])
-        y = df['quality']
+        print("White Wine Quality Distribution : ")
+        quality_counts = df_white['quality'].value_counts().sort_index()
+        print(quality_counts)
+
+        X = df_white.drop(columns=['quality'])
+        y = df_white['quality']
         
         self.feature_names = X.columns.tolist()
-        
         return X, y
-    
-    def DataGrouping(self, X, y, test_size=0.2, random_state=42):
-        # Group quality using median split
 
-        median_quality = y.median()
-        y_grouped = y.apply(lambda x: 'Low' if x <= median_quality else 'High')
-        print(f"\nBinary classification: Low (<= median : {median_quality}) vs High (> median : {median_quality})")
-        
-        print(f"Class distribution after grouping:\n{pd.Series(y_grouped).value_counts().sort_index()}")
-        
-        # Split the data
-        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, y_grouped, test_size=test_size, random_state=random_state, stratify=y_grouped)
-        
-        # Scale features
-        self.X_train_scaled = self.scaler.fit_transform(self.X_train)
-        self.X_test_scaled = self.scaler.transform(self.X_test)
+    def DataPreparer(self, X, y, test_size=0.2, random_state=42):
+        X_train, X_test, self.y_train, self.y_test = train_test_split(X, y, test_size=test_size, random_state=random_state)
+
+        self.X_train_scaled = self.scaler.fit_transform(X_train)
+        self.X_test_scaled = self.scaler.transform(X_test)
         
         print(f"Training set : {self.X_train_scaled.shape}")
         print(f"Test set : {self.X_test_scaled.shape}")
-        
-        return self.X_train_scaled, self.X_test_scaled, self.y_train, self.y_test
-    
-    def SVMtraining(self, kernel='rbf', C=1.0, gamma='scale', class_weight='balanced'):
-        # Train SVM model
 
-        print(f"\nTraining SVM with kernel='{kernel}', C={C}, gamma='{gamma}'")
-        
-        self.svm_model = SVC(
-            kernel=kernel,
-            C=C,
-            gamma=gamma,
-            class_weight=class_weight,
-            random_state=42
-        )
-        
-        self.svm_model.fit(self.X_train_scaled, self.y_train)
-        print("SVM Training Completed")
-        
-        return self.svm_model
-    
-    def hyperparameterTuning(self, cv=5):
-        # Perform hyperparameter tuning using GridSearchCV with parameters to reduce overfitting
-        print(f"\nPerforming hyperparameter tuning with {cv}-fold cross-validation...")
-        
-        # Define parameter grid for ~95% training and ~87% testing accuracy
-        param_grid = [
-            {
-                'kernel': ['rbf'],
-                'C': [20, 50, 100],  # Higher C for better training performance
-                'gamma': ['scale', 'auto', 0.1, 0.5]  # Higher gamma values for more complex boundaries
-            }
-        ]
-        
-        # Grid search
-        grid_search = GridSearchCV(
-            SVC(class_weight='balanced', random_state=42),
-            param_grid,
-            cv=cv,
-            scoring='accuracy',
-            n_jobs=1,  # Changed from -1 to 1 to avoid joblib error
-            verbose=1
-        )
-        
-        grid_search.fit(self.X_train_scaled, self.y_train)
-        
-        print(f"Hyperparameter tuning parameters: {grid_search.best_params_}")
-        print(f"Hyperparameter cross-validation score: {grid_search.best_score_:.4f}")
-        
-        self.svm_model = grid_search.best_estimator_
-        return grid_search.best_params_, grid_search.best_score_
-    
-    def modelEvaluation(self):
-        # Evaluate the trained SVM model
+    def TrainModel(self, kernel='rbf', C=1, gamma='scale', epsilon=0.1):
+        print(f"\nTraining SVR with kernel='{kernel}', C={C}, gamma='{gamma}', epsilon={epsilon}...")
+        self.svr_model = SVR(kernel=kernel, C=C, gamma=gamma, epsilon=epsilon)
+        self.svr_model.fit(self.X_train_scaled, self.y_train)
+        print("SVR Training Completed.")
 
-        if self.svm_model is None:
-            print("No model trained yet!")
+
+    def EvaluateModel(self):
+        if self.svr_model is None:
+            print("Model has not been trained yet.")
             return
+
+        print("\nModel Performance Evaluation : ")
         
-        # Predictions
-        y_train_pred = self.svm_model.predict(self.X_train_scaled)
-        y_test_pred = self.svm_model.predict(self.X_test_scaled)
+        # training and testing performance
+        y_train_pred = self.svr_model.predict(self.X_train_scaled)
+        train_r2 = r2_score(self.y_train, y_train_pred)
+        train_mse = mean_squared_error(self.y_train, y_train_pred)
+        print("\nTraining and Testing Set : ")
+        print(f"R-squared (R2) Training : {train_r2:.4f}")
+        print(f"Mean Squared Error (MSE) Training : {train_mse:.4f}")
+
+        y_test_pred = self.svr_model.predict(self.X_test_scaled)
+        test_r2 = r2_score(self.y_test, y_test_pred)
+        test_mse = mean_squared_error(self.y_test, y_test_pred)
+        print(f"R-squared (R2) Testing : {test_r2:.4f}")
+        print(f"Mean Squared Error (MSE) Testing : {test_mse:.4f}")
+
+    def PlotCurve(self):
+        if self.svr_model is None:
+            print("Model has not been trained yet.")
+            return
+            
+        print("\nGenerating learning curves : ")
         
-        # Accuracy scores
-        train_accuracy = accuracy_score(self.y_train, y_train_pred)
-        test_accuracy = accuracy_score(self.y_test, y_test_pred)
+        train_sizes, train_scores, test_scores = learning_curve(
+            estimator=self.svr_model,
+            X=self.X_train_scaled,
+            y=self.y_train,
+            cv=5,  # 5-fold cross-validation
+            scoring='neg_mean_squared_error',
+            n_jobs=None, 
+            train_sizes=np.linspace(0.1, 1.0, 10)
+        )
         
-        print("\nEvaluation Results:\n")
-        print(f"Training Accuracy: {train_accuracy:.4f}")
-        print(f"Test Accuracy: {test_accuracy:.4f}")
+        # The scores are negative MSE, so we make them positive
+        train_mse = -np.mean(train_scores, axis=1)
+        test_mse = -np.mean(test_scores, axis=1)
         
-        # Cross-validation
-        cv_scores = cross_val_score(self.svm_model, self.X_train_scaled, self.y_train, cv=5)
-        print(f"Cross-validation Accuracy: {cv_scores.mean():.4f} (+/- {cv_scores.std() * 2:.4f})")
-        
-        # Classification report
-        print("\nClassification Report (Test Set):")
-        print(classification_report(self.y_test, y_test_pred))
-        
-        # Support vectors info
-        print(f"\nNumber of support vectors: {self.svm_model.n_support_}")
-        print(f"Total support vectors: {sum(self.svm_model.n_support_)}")
-        
-        return {
-            'train_accuracy': train_accuracy,
-            'test_accuracy': test_accuracy,
-            'cv_scores': cv_scores,
-            'y_test_pred': y_test_pred
-        }
-    
-    def ResultPlots(self, results):
-        # Plot confusion matrix only
-        y_test_pred = results['y_test_pred']
-        
-        # Create confusion matrix plot
-        plt.figure(figsize=(8, 6))
-        cm = confusion_matrix(self.y_test, y_test_pred)
-        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
-                   xticklabels=['High', 'Low'], yticklabels=['High', 'Low'])
-        plt.title('Confusion Matrix\nWhite Wine Quality')
-        plt.xlabel('Predicted')
-        plt.ylabel('Actual')
-        plt.tight_layout()
+        plt.figure(figsize=(10, 6))
+        plt.plot(train_sizes, train_mse, 'o-', color='blue', label='Training MSE')
+        plt.plot(train_sizes, test_mse, 'o-', color='red', label='Cross-Validation MSE')
+        plt.title('SVR Learning Curves', fontsize=16)
+        plt.xlabel('Number of Training Samples', fontsize=12)
+        plt.ylabel('Mean Squared Error (MSE)', fontsize=12)
+        plt.legend(loc='best')
+        plt.grid(True)
         plt.show()
-    
-    def WineQualityPrediction(self, wine_features):
-        # Predict quality for new white wine samples 
 
-        if self.svm_model is None:
-            print("No model trained yet!")
-            return None
+    def WinePrediction(self, wine_features_dict):
+        if self.svr_model is None:
+            print("Model has not been trained yet.")
+            return None, None
+
+        # Create a DataFrame ensuring the correct feature order
+        wine_features_df = pd.DataFrame([wine_features_dict], columns=self.feature_names)
         
-        # Scale features
-        wine_features_scaled = self.scaler.transform(wine_features)
+        wine_features_scaled = self.scaler.transform(wine_features_df)
         
-        # Predict
-        predictions = self.svm_model.predict(wine_features_scaled)
-        probabilities = None
+        # Replace any NaNs that may occur from scaling zero-variance features
+        wine_features_scaled = np.nan_to_num(wine_features_scaled)
         
-        # Get prediction probabilities if available
-        if hasattr(self.svm_model, 'predict_proba'):
-            try:
-                # Enable probability estimation
-                self.svm_model.probability = True
-                probabilities = self.svm_model.predict_proba(wine_features_scaled)
-            except:
-                print("Probability estimation not available for this kernel")
+        predicted_score = self.svr_model.predict(wine_features_scaled)[0]
         
-        return predictions, probabilities
+        # Categorize the quality
+        if predicted_score <= 5:
+            quality_category = "Low"
+        elif 5 < predicted_score <= 6.5:
+            quality_category = "Medium"
+        else:
+            quality_category = "High"
+            
+        return predicted_score, quality_category
 
-def runWhiteWineSVM(tune_hyperparams=True):
-    # Run a complete white wine SVM experiment
+def main():
+    wine_predictor = WineQualitySVR()
+    
+    # Load data from the web and print its distribution
+    X, y = wine_predictor.Dataset_Loader()
+    if X is None:
+        return
+        
+    wine_predictor.DataPreparer(X, y)
+    
+    wine_predictor.TrainModel()
+    
+    wine_predictor.EvaluateModel()
 
-    print(f"Hyperparameter Tuning: {tune_hyperparams}")
+    print("\nPrediction Example : ")
+    example_wine = {
+        'fixed acidity': 6.8, 'volatile acidity': 0.27, 'citric acid': 0.35,
+        'residual sugar': 7.0, 'chlorides': 0.045, 'free sulfur dioxide': 35.0,
+        'total sulfur dioxide': 140.0, 'density': 0.995, 'pH': 3.15,
+        'sulphates': 0.45, 'alcohol': 9.5
+    }
     
-    # Initialize and load data
-    wine_svm = WhiteWineSVM()
-    X, y = wine_svm.DataLoader()
+    score, category = wine_predictor.WinePrediction(example_wine)
+    if score is not None:
+        print(f"Example wine features: {example_wine}")
+        print(f"Predicted Score: {score:.2f}")
+        print(f"Predicted Quality Category: {category}")
     
-    # Prepare data
-    wine_svm.DataGrouping(X, y)
-    
-    # Train model with regularization to prevent overfitting
-    if tune_hyperparams:
-        wine_svm.hyperparameterTuning()
-    else:
-        # Use parameters for ~95% training and ~87% testing accuracy
-        wine_svm.SVMtraining(kernel='rbf', C=50, gamma='scale')
-    
-    # Evaluate model
-    results = wine_svm.modelEvaluation()
-    
-    # Plot results
-    wine_svm.ResultPlots(results)
-    
-    return wine_svm, results
+    # Generate and show the learning curve plot
+    wine_predictor.PlotCurve()
 
-# Function to integrate with Flask app
-def getWineAPI():
-    # Train and return white wine SVM model for API integration and function can be called from your Flask app
-    wine_svm = WhiteWineSVM()
-    X, y = wine_svm.DataLoader()
-    wine_svm.DataGrouping(X, y)
-    
-    # Use parameters for high training performance
-    wine_svm.SVMtraining(kernel='rbf', C=50, gamma='scale')
-    
-    return wine_svm
-
-# Example usage
 if __name__ == "__main__":
-    # Run single experiment
-    wine_svm, results = runWhiteWineSVM(tune_hyperparams=True)
+    main()
