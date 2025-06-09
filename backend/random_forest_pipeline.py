@@ -38,7 +38,6 @@ def train_and_save_rf(n_estimators=100, random_state=42):
 
     # If your existing random_forest.py did NOT scale, you can skip this step:
     model_input_train = X_train
-    model_input_test  = X_test
 
     # 5) instantiate & fit the RandomForestRegressor
     rf = RandomForestRegressor(n_estimators=n_estimators, random_state=random_state)

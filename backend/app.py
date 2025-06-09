@@ -23,7 +23,7 @@ poly_transformer  = poly_bundle["poly"]
 poly_model        = poly_bundle["model"]
 poly_features     = poly_bundle["feature_names"]
 
-# 2) SVM pipeline
+#SVM pipeline
 svm_path = os.path.join(ARTIFACT_DIR, "wine_svm_pipeline.pkl")
 svm_bundle = joblib.load(svm_path)
 svm_scaler     = svm_bundle["scaler"]
@@ -36,8 +36,14 @@ rf_bundle = joblib.load(rf_path)
 rf_model      = rf_bundle["model"]
 rf_features   = rf_bundle["feature_names"]
 
-# ---- STEP 2: helper function to build a DataFrame row from JSON ----
+# light gbm pipeline
+lgbm_path   = os.path.join(ARTIFACT_DIR, "wine_lgbm_pipeline.pkl")
+lgbm_bundle = joblib.load(lgbm_path)
+lgbm_model     = lgbm_bundle["model"]
+lgbm_features  = lgbm_bundle["feature_names"]
 
+
+# this converts json data to dataframe
 def json_to_df(json_data: dict, feature_list: list):
     """
     Take a JSON payload like
@@ -53,8 +59,8 @@ def json_to_df(json_data: dict, feature_list: list):
     df = pd.DataFrame([row], columns=feature_list)
     return df
 
-# ---- STEP 3: endpoints ----
 
+#polyreg endpoints
 @app.route("/api/features/polyreg", methods=["GET"])
 def get_polyreg_features():
     """
@@ -117,6 +123,7 @@ def predict_polyreg():
         )
 
 
+# random forests route
 @app.route("/api/features/rf", methods=["GET"])
 def get_rf_features():
     return jsonify({"features": rf_features})
@@ -143,6 +150,7 @@ def predict_rf():
         return jsonify({"error": "prediction_failed", "message": str(e)}), 500
 
 
+# SVM routes
 @app.route("/api/features/svm", methods=["GET"])
 def get_svm_features():
     return jsonify({"features": svm_features})
@@ -168,32 +176,31 @@ def predict_svm():
         X_scaled = svm_scaler.transform(X_df)
 
         # 2) predict class
-        y_hat = svm_model.predict(X_scaled)   # e.g. array(["High"], dtype=object)
-        y_hat_label = y_hat[0]
-
-        # 3) optionally predict probabilities (if the model was trained with .probability=True)
-        prob = None
-        if hasattr(svm_model, "predict_proba"):
-            try:
-                # If your SVC was fit with `probability=True`, this will work:
-                prob_array = svm_model.predict_proba(X_scaled)  # shape (1, 2)
-                # Let’s assume index 0=“High” & index 1=“Low” or vice‐versa; clarify by looking at svm_model.classes_
-                classes = list(svm_model.classes_)  # e.g. ["High", "Low"]
-                idx = classes.index(y_hat_label)
-                prob = float(prob_array[0][idx])
-            except:
-                prob = None
-
-        response = {"predicted_class": y_hat_label}
-        if prob is not None:
-            response["probability"] = prob
-
-        return jsonify(response)
+        y_hat = svm_model.predict(X_scaled) 
+        return jsonify({"predicted_quality": float(y_hat[0])})
 
     except KeyError as ke:
         return (jsonify({"error": "missing_features", "message": str(ke)}), 400)
     except Exception as e:
         return (jsonify({"error": "prediction_failed", "message": str(e)}), 500)
+    
+#lgbm routes
+@app.route("/api/features/lgbm", methods=["GET"])
+def get_lgbm_features():
+    return jsonify({"features": lgbm_features})
+
+@app.route("/api/predict/lgbm", methods=["POST"])
+def predict_lgbm():
+    try:
+        data = request.get_json(force=True)
+        df   = json_to_df(data, lgbm_features)
+        # no scaler for trees, so:
+        y_hat = lgbm_model.predict(df)
+        return jsonify({"predicted_quality": float(y_hat[0])})
+    except KeyError as ke:
+        return jsonify({"error":"missing_features","message":str(ke)}),400
+    except Exception as e:
+        return jsonify({"error":"prediction_failed","message":str(e)}),500
 
 
 @app.route("/api/health", methods=["GET"])

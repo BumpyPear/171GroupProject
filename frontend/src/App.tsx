@@ -4,16 +4,13 @@ import { getFeatures, predict } from './api';
 
 
 interface PredictionResult {
-  // for regression endpoints (polyreg & rf):
   predicted_quality?: number;
-  // for classification endpoint (svm):
-  predicted_class?: string;
-  probability?: number;
 }
+
 
 function App() {
   // for inputs
-  type ModelKey = "polyreg" | "svm" | "rf";
+  type ModelKey = "polyreg" | "svm" | "rf" | "lgbm";
 
   // selectedModel defaults to the svm
   const [selectedModel, setSelectedModel] = useState<ModelKey>("svm");
@@ -35,6 +32,7 @@ const models: { key: ModelKey; label: string }[] = [
   { key: "polyreg", label: "Polynomial Regression" },
   { key: "svm", label: "SVM Classification" },
   { key: "rf", label: "Random Forest" },
+  { key: "lgbm", label: "Light GBM"},
 ];
 
 
@@ -158,33 +156,19 @@ const models: { key: ModelKey; label: string }[] = [
         <p>Loading features...</p>
       )}
 
-      {/* Display prediction result once available */}
-      {result && (
-        <div
-          style={{
-            marginTop: "1.5rem",
-            padding: "1rem",
-            border: "1px solid #ccc",
-          }}
-        >
-          {(selectedModel === "polyreg" || selectedModel === "rf") && (
-            <p>
-              <strong>Predicted Quality: </strong>
-              {result.predicted_quality}
-            </p>
-          )}
+    {/* Display prediction result once available */}
+    {result && (
+      <div style={{ marginTop: "1.5rem", padding: "1rem", border: "1px solid #ccc" }}>
+        {/* For all four models, show the numeric predicted_quality if present */}
+        {result.predicted_quality !== undefined && (
+          <p>
+            <strong>Predicted Quality: </strong>
+            {result.predicted_quality.toFixed(2)}
+          </p>
+        )}
+      </div>
+    )}
 
-          {selectedModel === "svm" && result.predicted_class && (
-            <p>
-              <strong>Predicted Class: </strong>
-              {result.predicted_class}
-              {result.probability !== undefined && (
-                <> - (Probability: {Number(result.probability).toFixed(2)})</>
-              )}
-            </p>
-          )}
-        </div>
-      )}
     </div>
   );
 }
