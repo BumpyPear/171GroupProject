@@ -63,5 +63,10 @@ if __name__ == "__main__":
 
     train_and_save_polyreg(degree=2, model_type="ridge", alpha=1.0, scaler_type="standard")
     train_and_save_svm()
-    train_and_save_rf(n_estimators=100)
-    train_and_save_lgbm(n_estimators=100, random_state=42)
+    train_and_save_rf()
+    train_and_save_lgbm(
+  n_estimators=1000,
+  early_stopping_rounds=20,
+  test_size=0.2,
+  random_state=42
+)
