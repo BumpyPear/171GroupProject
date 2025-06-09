@@ -8,13 +8,14 @@ import pandas as pd
 app = Flask(__name__)
 CORS(app)
 
-# ---- STEP 1: load your pickled pipelines on startup ----
 
-# Adjust paths as needed:
-BASE_DIR = os.path.dirname("./")              # points at backend/
+# base paths
+BASE_DIR = os.path.dirname("./")             
 ARTIFACT_DIR = os.path.join(BASE_DIR, "models")
 
-# 1) Polynomial‐Regression pipeline
+# this loads all the models and another params from the pkl files
+
+#polyreg pipeline
 poly_path = os.path.join(ARTIFACT_DIR, "wine_poly_pipeline.pkl")
 poly_bundle = joblib.load(poly_path)
 
@@ -54,7 +55,6 @@ def json_to_df(json_data: dict, feature_list: list):
     if missing_keys:
         raise KeyError(f"Missing required features: {missing_keys}")
 
-    # Extract values in the correct order:
     row = [json_data[f] for f in feature_list]
     df = pd.DataFrame([row], columns=feature_list)
     return df
@@ -72,32 +72,16 @@ def get_polyreg_features():
 
 @app.route("/api/predict/polyreg", methods=["POST"])
 def predict_polyreg():
-    """
-    Expects a JSON body that includes exactly all the keys in poly_features.
-    E.g.
-    {
-      "fixed_acidity": 7.4,
-      "volatile_acidity": 0.70,
-      ...
-      "alcohol": 9.4
-    }
-    Returns:
-      { "predicted_quality": 5.7324 }
-    """
     try:
         json_data = request.get_json(force=True)
-        # Convert JSON → single‐row DataFrame
         X_df = json_to_df(json_data, poly_features)
 
-        # 1) scale
         X_scaled = poly_scaler.transform(X_df)
 
-        # 2) polynomial features
         X_poly   = poly_transformer.transform(X_scaled)
 
-        # 3) predict (regression)
-        y_pred = poly_model.predict(X_poly)  # this returns a 1‐element array
-        result = float(y_pred[0])  # cast to native Python float for JSON serialization
+        y_pred = poly_model.predict(X_poly)
+        result = float(y_pred[0])
 
         return jsonify({"predicted_quality": result})
 
@@ -134,10 +118,6 @@ def predict_rf():
         json_data = request.get_json(force=True)
         X_df = json_to_df(json_data, rf_features)
 
-        # no scaler so this is commented out:
-        # X_scaled = rf_scaler.transform(X_df)
-        # y_hat    = rf_model.predict(X_scaled)
-        # Otherwise, skip scaling:
         y_hat = rf_model.predict(X_df)
 
         return jsonify({"predicted_quality": float(y_hat[0])})
@@ -158,24 +138,11 @@ def get_svm_features():
 
 @app.route("/api/predict/svm", methods=["POST"])
 def predict_svm():
-    """
-    Expects a JSON body with same structure (feature‐name: value).
-    Returns something like:
-      {
-         "predicted_class": "High",
-         "probability": 0.87
-      }
-    If the SVM kernel was not fitted with probability=True, you can just return
-      { "predicted_class": "High" }.
-    """
     try:
         json_data = request.get_json(force=True)
         X_df = json_to_df(json_data, svm_features)
-
-        # 1) scale
         X_scaled = svm_scaler.transform(X_df)
 
-        # 2) predict class
         y_hat = svm_model.predict(X_scaled) 
         return jsonify({"predicted_quality": float(y_hat[0])})
 
@@ -209,5 +176,4 @@ def health_check():
 
 
 if __name__ == "__main__":
-    # “host='0.0.0.0'” makes it visible on your LAN; keep port=5000 unless you have a reason to change.
     app.run(host="0.0.0.0", port=5000, debug=True)
